@@ -19,27 +19,26 @@ public class TaskController {
     }
 
     @GetMapping
-    public List<TaskItem> getAllTasks() {
+    public List<TaskResponseDTO> getAllTasks() {
         return taskService.getAllTasks();
     }
 
     @GetMapping("/{id}")
-    public TaskItem getTaskById(@PathVariable Long id) {
+    public TaskResponseDTO getTaskById(@PathVariable Long id) {
         return taskService.getTaskById(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public TaskItem createTask(@Valid @RequestBody TaskItem task) {
-        return taskService.createTask(task);
+    public TaskResponseDTO createTask(@Valid @RequestBody TaskRequestDTO request) {
+        return taskService.createTask(request);
     }
 
     @PutMapping("/{id}")
-    public TaskItem updateTask(
+    public TaskResponseDTO updateTask(
             @PathVariable Long id,
-            @Valid @RequestBody TaskItem updatedTask) {
-
-        return taskService.updateTask(id, updatedTask);
+            @Valid @RequestBody TaskRequestDTO request) {
+        return taskService.updateTask(id, request);
     }
 
     @DeleteMapping("/{id}")

@@ -1,9 +1,7 @@
 
 package com.portfolio.taskflow;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -16,35 +14,44 @@ public class TaskService {
         this.taskRepository = taskRepository;
     }
 
-    public List<TaskItem> getAllTasks() {
-        return taskRepository.findAll();
+    public List<TaskResponseDTO> getAllTasks() {
+        return taskRepository.findAll().stream()
+                .map(this::toResponse)
+                .toList();
     }
 
-    public TaskItem getTaskById(Long id) {
-        return taskRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Task not found with id: " + id
-                ));
+    public TaskResponseDTO getTaskById(Long id) {
+        return toResponse(findTask(id));
     }
 
-    public TaskItem createTask(TaskItem task) {
-        task.setId(null);
-        return taskRepository.save(task);
+    public TaskResponseDTO createTask(TaskRequestDTO request) {
+        TaskItem task = new TaskItem();
+        applyRequest(task, request);
+        return toResponse(taskRepository.save(task));
     }
 
-    public TaskItem updateTask(Long id, TaskItem updatedTask) {
-        TaskItem existingTask = getTaskById(id);
-
-        existingTask.setTitle(updatedTask.getTitle());
-        existingTask.setDescription(updatedTask.getDescription());
-        existingTask.setStatus(updatedTask.getStatus());
-
-        return taskRepository.save(existingTask);
+    public TaskResponseDTO updateTask(Long id, TaskRequestDTO request) {
+        TaskItem task = findTask(id);
+        applyRequest(task, request);
+        return toResponse(taskRepository.save(task));
     }
 
     public void deleteTask(Long id) {
-        TaskItem task = getTaskById(id);
-        taskRepository.delete(task);
+        taskRepository.delete(findTask(id));
+    }
+
+    private TaskItem findTask(Long id) {
+        return taskRepository.findById(id)
+                .orElseThrow(() -> new TaskNotFoundException(id));
+    }
+
+    private void applyRequest(TaskItem task, TaskRequestDTO request) {
+        task.setTitle(request.getTitle());
+        task.setDescription(request.getDescription());
+        task.setStatus(TaskItem.Status.valueOf(request.getStatus()));
+    }
+
+    private TaskResponseDTO toResponse(TaskItem task) {
+        return new TaskResponseDTO(task.getId(), task.getTitle(), task.getDescription(), task.getStatus());
     }
 }
