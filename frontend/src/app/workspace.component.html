@@ -1,0 +1,302 @@
+<div class="workspace">
+  <aside class="sidebar">
+    <a class="brand" routerLink="/">
+      <span class="brand-mark"><i class="ph ph-checks" aria-hidden="true"></i></span>
+      <span>TaskFlow</span>
+    </a>
+
+    <nav aria-label="Navigation principale">
+      <a class="nav-link" routerLink="/" [class.active]="dashboard" [attr.aria-current]="dashboard ? 'page' : null">
+        <i class="ph ph-squares-four" aria-hidden="true"></i>
+        <span>Tableau de bord</span>
+      </a>
+      <a class="nav-link" routerLink="/tasks" routerLinkActive="active" ariaCurrentWhenActive="page">
+        <i class="ph ph-list-checks" aria-hidden="true"></i>
+        <span>Toutes les tâches</span>
+      </a>
+    </nav>
+
+    <div class="connection" [class.offline]="loadError()" [class.connecting]="loading()">
+      <span class="connection-dot" aria-hidden="true"></span>
+      {{ loading() ? 'Connexion à l’API' : loadError() ? 'API indisponible' : 'API connectée' }}
+    </div>
+  </aside>
+
+  <main class="content">
+    <header class="page-header">
+      <h1>{{ dashboard ? 'Tableau de bord' : 'Toutes les tâches' }}</h1>
+      <button class="button button-primary" type="button" (click)="openForm()" [disabled]="loading() || !!loadError()">
+        <i class="ph ph-plus" aria-hidden="true"></i>
+        Nouvelle tâche
+      </button>
+    </header>
+
+    @if (dashboard) {
+      <section class="hero" aria-labelledby="progress-title">
+        <div class="hero-copy">
+          <span class="hero-icon"><i class="ph ph-chart-line-up" aria-hidden="true"></i></span>
+          <h2 id="progress-title">Progression des tâches</h2>
+          @if (!loading() && !loadError()) {
+            <p>{{ stats().counts.DONE }} sur {{ stats().total }}
+              {{ stats().total === 1 ? 'tâche terminée' : 'tâches terminées' }}</p>
+          }
+        </div>
+        <div class="hero-graphic">
+          <div class="progress-ring" role="img" [style.--completion]="stats().completion + '%'"
+               [attr.aria-label]="loading() || loadError() ? 'Progression indisponible' : stats().completion + ' pour cent de tâches terminées'">
+            <span class="progress-value" aria-hidden="true">
+              @if (loading() || loadError()) {
+                —
+              } @else {
+                {{ stats().completion }}<span class="percent"> %</span>
+              }
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <section class="stats-grid" aria-label="Statistiques des tâches">
+        <a class="stat-card" routerLink="/tasks">
+          <span class="stat-icon" data-tone="total"><i class="ph ph-stack" aria-hidden="true"></i></span>
+          <span class="stat-copy">
+            <span class="stat-label">Total</span>
+            <strong>{{ loading() || loadError() ? '—' : stats().total }}</strong>
+          </span>
+        </a>
+        @for (option of statusOptions; track option.value) {
+          <a class="stat-card" routerLink="/tasks" [queryParams]="{ status: option.value }">
+            <span class="stat-icon" [attr.data-tone]="option.tone">
+              <i [class]="'ph ph-' + option.icon" aria-hidden="true"></i>
+            </span>
+            <span class="stat-copy">
+              <span class="stat-label">{{ option.value === 'DONE' ? 'Terminées' : option.label }}</span>
+              <strong>{{ loading() || loadError() ? '—' : stats().counts[option.value] }}</strong>
+            </span>
+          </a>
+        }
+      </section>
+    }
+
+    <div class="notice-area" role="status">
+      @if (success()) {
+        <div class="notice notice-success">
+          <i class="ph ph-check-circle" aria-hidden="true"></i>
+          <span>{{ success() }}</span>
+          <button class="icon-button" type="button" aria-label="Fermer le message" (click)="success.set('')">
+            <i class="ph ph-x" aria-hidden="true"></i>
+          </button>
+        </div>
+      }
+    </div>
+
+    <section class="tasks-panel" [attr.aria-labelledby]="dashboard ? 'tasks-title' : null"
+             [attr.aria-label]="dashboard ? null : 'Liste des tâches'" [attr.aria-busy]="loading()">
+      <div class="tasks-header">
+        @if (dashboard) {
+          <h2 id="tasks-title">Tâches</h2>
+        }
+        <div class="task-toolbar">
+          <label class="search-field">
+            <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+            <input #searchInput type="search" aria-label="Rechercher par titre" placeholder="Rechercher par titre…"
+                   [value]="search()" (input)="search.set(searchInput.value)">
+          </label>
+          <div class="filters" role="group" aria-label="Filtrer par statut">
+            <button type="button" class="filter" [attr.aria-pressed]="filter() === 'ALL'" (click)="selectFilter('ALL')">
+              Toutes
+            </button>
+            @for (option of statusOptions; track option.value) {
+              <button type="button" class="filter" [attr.aria-pressed]="filter() === option.value"
+                      (click)="selectFilter(option.value)">
+                {{ option.value === 'DONE' ? 'Terminées' : option.label }}
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+
+      @if (loading()) {
+        <div class="list-state" role="status">
+          <span class="spinner" aria-hidden="true"></span>
+          <p>Chargement des tâches…</p>
+        </div>
+      } @else if (loadError()) {
+        <div class="list-state list-error" role="alert">
+          <i class="ph ph-warning-circle" aria-hidden="true"></i>
+          <p>{{ loadError() }}</p>
+          <button type="button" class="button button-secondary" (click)="loadTasks()">Réessayer</button>
+        </div>
+      } @else if (stats().total === 0) {
+        <div class="list-state">
+          <i class="ph ph-list-checks" aria-hidden="true"></i>
+          <p>Aucune tâche pour le moment.</p>
+        </div>
+      } @else if (visibleTasks().length === 0) {
+        <div class="list-state" role="status">
+          <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+          <p>Aucune tâche ne correspond à cette recherche.</p>
+          <button type="button" class="button button-secondary" (click)="clearFilters()">Effacer les filtres</button>
+        </div>
+      } @else {
+        <table class="task-table">
+          <thead>
+            <tr>
+              <th scope="col">Tâche</th>
+              <th scope="col">Statut</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (task of visibleTasks(); track task.id) {
+              @let status = statusInfo(task.status);
+              <tr>
+                <th scope="row">
+                  <div class="task-detail">
+                    <span class="row-icon" [attr.data-tone]="status.tone">
+                      <i [class]="'ph ph-' + status.icon" aria-hidden="true"></i>
+                    </span>
+                    <div class="task-copy">
+                      <strong>{{ task.title }}</strong>
+                      @if (task.description) {
+                        <p>{{ task.description }}</p>
+                      }
+                    </div>
+                  </div>
+                </th>
+                <td>
+                  <span class="status-pill" [attr.data-tone]="status.tone">{{ status.label }}</span>
+                </td>
+                <td>
+                  <div class="row-actions">
+                    <button type="button" class="icon-button" [attr.aria-label]="'Modifier ' + task.title"
+                            title="Modifier" (click)="openForm(task)">
+                      <i class="ph ph-pencil-simple" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="icon-button delete-action" [attr.aria-label]="'Supprimer ' + task.title"
+                            title="Supprimer" (click)="openDeletion(task)">
+                      <i class="ph ph-trash" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        <div class="table-footer" role="status">
+          {{ visibleTasks().length }} {{ visibleTasks().length === 1 ? 'tâche affichée' : 'tâches affichées' }}
+          @if (visibleTasks().length !== stats().total) {
+            sur {{ stats().total }}
+          }
+        </div>
+      }
+    </section>
+  </main>
+</div>
+
+<dialog #taskDialog class="dialog" aria-labelledby="task-dialog-title" (cancel)="onDialogCancel($event)">
+  @let titleControl = taskForm.controls.title;
+  @let descriptionControl = taskForm.controls.description;
+  @let statusControl = taskForm.controls.status;
+  <div class="dialog-header">
+    <h2 id="task-dialog-title">{{ editingId() === null ? 'Nouvelle tâche' : 'Modifier la tâche' }}</h2>
+    <button type="button" class="icon-button" aria-label="Fermer" [disabled]="pending()" (click)="closeDialog(taskDialog)">
+      <i class="ph ph-x" aria-hidden="true"></i>
+    </button>
+  </div>
+  <form [formGroup]="taskForm" (ngSubmit)="saveTask()">
+    @if (dialogError()) {
+      <div class="notice notice-error" role="alert">
+        <i class="ph ph-warning-circle" aria-hidden="true"></i><span>{{ dialogError() }}</span>
+      </div>
+    }
+    <fieldset [disabled]="pending()">
+      <div class="form-field">
+        <label for="task-title">Titre <span class="field-note">(obligatoire)</span></label>
+        <input id="task-title" formControlName="title" autofocus required aria-describedby="title-feedback"
+               [attr.aria-invalid]="(titleControl.touched && titleControl.invalid) || serverFieldErrors().title ? 'true' : null"
+               (input)="clearFieldError('title')">
+        <div id="title-feedback" class="field-feedback">
+          @if (titleControl.touched) {
+            @if (titleControl.hasError('required') || titleControl.hasError('pattern')) {
+              <span class="field-error">Le titre est obligatoire.</span>
+            } @else if (titleControl.hasError('maxlength')) {
+              <span class="field-error">Le titre ne doit pas dépasser {{ titleLimit }} caractères.</span>
+            }
+          }
+          @for (error of serverFieldErrors().title ?? []; track $index) {
+            <span class="field-error">{{ error }}</span>
+          }
+          <span class="field-count">{{ titleControl.value.length }} / {{ titleLimit }}</span>
+        </div>
+      </div>
+      <div class="form-field">
+        <label for="task-description">Description <span class="field-note">(facultative)</span></label>
+        <textarea id="task-description" formControlName="description" rows="4" aria-describedby="description-feedback"
+                  [attr.aria-invalid]="(descriptionControl.touched && descriptionControl.invalid) || serverFieldErrors().description ? 'true' : null"
+                  (input)="clearFieldError('description')"></textarea>
+        <div id="description-feedback" class="field-feedback">
+          @if (descriptionControl.touched && descriptionControl.hasError('maxlength')) {
+            <span class="field-error">La description ne doit pas dépasser {{ descriptionLimit }} caractères.</span>
+          }
+          @for (error of serverFieldErrors().description ?? []; track $index) {
+            <span class="field-error">{{ error }}</span>
+          }
+          <span class="field-count">{{ descriptionControl.value.length }} / {{ descriptionLimit }}</span>
+        </div>
+      </div>
+      <div class="form-field">
+        <label for="task-status">Statut</label>
+        <div class="select-wrapper">
+          <select id="task-status" formControlName="status" required aria-describedby="status-feedback"
+                  [attr.aria-invalid]="(statusControl.touched && statusControl.invalid) || serverFieldErrors().status ? 'true' : null"
+                  (change)="clearFieldError('status')">
+            @for (option of statusOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+          <i class="ph ph-caret-down" aria-hidden="true"></i>
+        </div>
+        <div id="status-feedback" class="field-feedback">
+          @if (statusControl.touched && statusControl.invalid) {
+            <span class="field-error">Sélectionnez un statut valide.</span>
+          }
+          @for (error of serverFieldErrors().status ?? []; track $index) {
+            <span class="field-error">{{ error }}</span>
+          }
+        </div>
+      </div>
+    </fieldset>
+    <div class="dialog-actions">
+      <button type="button" class="button button-secondary" [disabled]="pending()" (click)="closeDialog(taskDialog)">
+        Annuler
+      </button>
+      <button type="submit" class="button button-primary" [disabled]="pending()">
+        {{ pending() ? 'Enregistrement…' : editingId() === null ? 'Créer la tâche' : 'Enregistrer' }}
+      </button>
+    </div>
+  </form>
+</dialog>
+
+<dialog #deleteDialog class="dialog delete-dialog" aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-description" (cancel)="onDialogCancel($event)">
+  <div class="dialog-header">
+    <h2 id="delete-dialog-title">Supprimer la tâche</h2>
+    <button type="button" class="icon-button" aria-label="Fermer" [disabled]="pending()" (click)="closeDialog(deleteDialog)">
+      <i class="ph ph-x" aria-hidden="true"></i>
+    </button>
+  </div>
+  <p id="delete-description">Supprimer « <strong>{{ deletingTask()?.title }}</strong> » définitivement&nbsp;?</p>
+  @if (dialogError()) {
+    <div class="notice notice-error" role="alert">
+      <i class="ph ph-warning-circle" aria-hidden="true"></i><span>{{ dialogError() }}</span>
+    </div>
+  }
+  <div class="dialog-actions">
+    <button type="button" class="button button-secondary" autofocus [disabled]="pending()" (click)="closeDialog(deleteDialog)">
+      Annuler
+    </button>
+    <button type="button" class="button button-danger" [disabled]="pending()" (click)="deleteTask()">
+      {{ pending() ? 'Suppression…' : 'Supprimer' }}
+    </button>
+  </div>
+</dialog>
