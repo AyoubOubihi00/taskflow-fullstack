@@ -9,7 +9,10 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.util.List;
@@ -20,6 +23,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -30,10 +34,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(TaskController.class)
-@Import(TaskService.class)
+@Import({TaskService.class, SecurityConfig.class})
 class TaskControllerTest {
 
     private static final String TASKS = "/api/tasks";
+    private static final long OWNER_ID = 42L;
+
+    @DynamicPropertySource
+    static void jwtKey(DynamicPropertyRegistry registry) {
+        registry.add("taskflow.jwt.key", TestSecrets::randomKey);
+    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -46,12 +56,13 @@ class TaskControllerTest {
         when(taskRepository.save(any(TaskItem.class))).thenAnswer(invocation -> {
             TaskItem task = invocation.getArgument(0);
             assertThat(task.getId()).isNull();
+            assertThat(task.ownerId()).isEqualTo(OWNER_ID);
             assertThat(task.getStatus()).isEqualTo(TaskItem.Status.TODO);
             task.setId(7L);
             return task;
         });
 
-        mockMvc.perform(json(post(TASKS), """
+        perform(json(post(TASKS), """
                         {"id":99,"title":"Créer une tâche","description":"Ajouter les DTO"}
                         """))
                 .andExpect(status().isCreated())
@@ -67,7 +78,7 @@ class TaskControllerTest {
         String description = "d".repeat(2000);
         when(taskRepository.save(any(TaskItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        mockMvc.perform(json(post(TASKS), """
+        perform(json(post(TASKS), """
                         {"title":"%s","description":"%s","status":"IN_PROGRESS"}
                         """.formatted(title, description)))
                 .andExpect(status().isCreated())
@@ -78,9 +89,9 @@ class TaskControllerTest {
 
     @Test
     void listsTasks() throws Exception {
-        when(taskRepository.findAll()).thenReturn(List.of(existingTask()));
+        when(taskRepository.findAllByOwnerId(OWNER_ID)).thenReturn(List.of(existingTask()));
 
-        mockMvc.perform(get(TASKS))
+        perform(get(TASKS))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].id").value(7))
@@ -89,9 +100,9 @@ class TaskControllerTest {
 
     @Test
     void retrievesTaskById() throws Exception {
-        when(taskRepository.findById(7L)).thenReturn(Optional.of(existingTask()));
+        when(taskRepository.findByIdAndOwnerId(7L, OWNER_ID)).thenReturn(Optional.of(existingTask()));
 
-        mockMvc.perform(get(TASKS + "/7"))
+        perform(get(TASKS + "/7"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(7))
                 .andExpect(jsonPath("$.title").value("Ancien titre"))
@@ -102,10 +113,10 @@ class TaskControllerTest {
     @Test
     void updatesExistingTask() throws Exception {
         TaskItem task = existingTask();
-        when(taskRepository.findById(7L)).thenReturn(Optional.of(task));
+        when(taskRepository.findByIdAndOwnerId(7L, OWNER_ID)).thenReturn(Optional.of(task));
         when(taskRepository.save(task)).thenReturn(task);
 
-        mockMvc.perform(json(put(TASKS + "/7"), """
+        perform(json(put(TASKS + "/7"), """
                         {"id":99,"title":"Nouveau titre","description":"Nouvelle description","status":"DONE"}
                         """))
                 .andExpect(status().isOk())
@@ -120,9 +131,9 @@ class TaskControllerTest {
     @Test
     void deletesExistingTask() throws Exception {
         TaskItem task = existingTask();
-        when(taskRepository.findById(7L)).thenReturn(Optional.of(task));
+        when(taskRepository.findByIdAndOwnerId(7L, OWNER_ID)).thenReturn(Optional.of(task));
 
-        mockMvc.perform(delete(TASKS + "/7"))
+        perform(delete(TASKS + "/7"))
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""));
 
@@ -132,7 +143,7 @@ class TaskControllerTest {
     @ParameterizedTest
     @ValueSource(strings = {"{}", "{\"title\":\"   \"}"})
     void rejectsMissingOrBlankTitle(String body) throws Exception {
-        mockMvc.perform(json(post(TASKS), body))
+        perform(json(post(TASKS), body))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.status").value(400))
@@ -144,7 +155,7 @@ class TaskControllerTest {
 
     @Test
     void reportsBothLengthViolationsOnUpdate() throws Exception {
-        mockMvc.perform(json(put(TASKS + "/7"), """
+        perform(json(put(TASKS + "/7"), """
                         {"title":"%s","description":"%s","status":"TODO"}
                         """.formatted("t".repeat(121), "d".repeat(2001))))
                 .andExpect(status().isBadRequest())
@@ -159,7 +170,7 @@ class TaskControllerTest {
     @ParameterizedTest
     @ValueSource(strings = {"\"BLOCKED\"", "\"todo\"", "1", "null", "{}"})
     void rejectsInvalidStatuses(String value) throws Exception {
-        mockMvc.perform(json(post(TASKS), """
+        perform(json(post(TASKS), """
                         {"title":"Tâche","status":%s}
                         """.formatted(value)))
                 .andExpect(status().isBadRequest())
@@ -171,7 +182,7 @@ class TaskControllerTest {
 
     @Test
     void rejectsMalformedJson() throws Exception {
-        mockMvc.perform(json(post(TASKS), "{\"title\":"))
+        perform(json(post(TASKS), "{\"title\":"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.message").value("Le corps de la requête doit être un objet JSON valide."))
@@ -180,7 +191,7 @@ class TaskControllerTest {
 
     @Test
     void rejectsNonNumericId() throws Exception {
-        mockMvc.perform(get(TASKS + "/abc"))
+        perform(get(TASKS + "/abc"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.message").value("Le paramètre « id » a un format invalide."))
@@ -190,15 +201,19 @@ class TaskControllerTest {
     @ParameterizedTest
     @ValueSource(strings = {"GET", "PUT", "DELETE"})
     void returnsConsistentErrorWhenTaskIsMissing(String method) throws Exception {
-        when(taskRepository.findById(7L)).thenReturn(Optional.empty());
+        when(taskRepository.findByIdAndOwnerId(7L, OWNER_ID)).thenReturn(Optional.empty());
 
-        mockMvc.perform(json(request(HttpMethod.valueOf(method), TASKS + "/7"),
+        perform(json(request(HttpMethod.valueOf(method), TASKS + "/7"),
                         "{\"title\":\"Tâche\"}"))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.message").value("La tâche 7 est introuvable."))
                 .andExpect(jsonPath("$.errors").isEmpty());
+    }
+
+    private ResultActions perform(MockHttpServletRequestBuilder request) throws Exception {
+        return mockMvc.perform(request.with(jwt().jwt(token -> token.subject(Long.toString(OWNER_ID)))));
     }
 
     private static MockHttpServletRequestBuilder json(MockHttpServletRequestBuilder request, String body) {

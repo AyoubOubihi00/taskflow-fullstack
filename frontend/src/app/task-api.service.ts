@@ -1,11 +1,12 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
+import { TASKS_URL } from './api.config';
 import { TaskRequestDTO, TaskResponseDTO } from './task.model';
 
 @Injectable({ providedIn: 'root' })
 export class TaskApiService {
   private readonly http = inject(HttpClient);
-  private readonly url = 'http://localhost:8080/api/tasks';
+  private readonly url = TASKS_URL;
 
   getTasks() {
     return this.http.get<TaskResponseDTO[]>(this.url);

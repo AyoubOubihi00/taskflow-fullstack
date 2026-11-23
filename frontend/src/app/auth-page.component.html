@@ -1,0 +1,106 @@
+<main class="auth-shell">
+  <div class="auth-layout">
+    <div class="auth-art">
+      <a class="auth-brand" routerLink="/">
+        <span class="auth-mark"><i class="ph ph-checks" aria-hidden="true"></i></span>
+        TaskFlow
+      </a>
+
+      <div class="auth-visual" aria-hidden="true">
+        <div class="visual-card visual-card-back"></div>
+        <div class="visual-card visual-card-front">
+          <div class="visual-row">
+            <span class="visual-icon visual-done"><i class="ph ph-check" aria-hidden="true"></i></span>
+            <div class="visual-lines"><span></span><span></span></div>
+          </div>
+          <div class="visual-row">
+            <span class="visual-icon visual-progress"><i class="ph ph-hourglass-medium" aria-hidden="true"></i></span>
+            <div class="visual-lines"><span></span><span></span></div>
+          </div>
+          <div class="visual-row">
+            <span class="visual-icon visual-todo"><i class="ph ph-circle-dashed" aria-hidden="true"></i></span>
+            <div class="visual-lines"><span></span><span></span></div>
+          </div>
+        </div>
+      </div>
+
+      <p class="art-caption"><i class="ph ph-lock-key" aria-hidden="true"></i> Tes tâches dans ton espace privé</p>
+    </div>
+
+    <section class="auth-card" aria-labelledby="auth-title">
+      <h1 id="auth-title">{{ registration ? 'Créer un compte' : 'Connexion' }}</h1>
+
+      @if (sessionNotice() && !registration) {
+        <div class="auth-message auth-info" role="status">
+          <i class="ph ph-info" aria-hidden="true"></i>
+          <span>{{ sessionNotice() }}</span>
+        </div>
+      }
+      @if (failure()) {
+        <div class="auth-message auth-error" role="alert">
+          <i class="ph ph-warning-circle" aria-hidden="true"></i>
+          <span>{{ failure() }}</span>
+        </div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <fieldset [disabled]="pending()">
+          <div class="auth-field">
+            <label for="account-email">Adresse e-mail</label>
+            <input id="account-email" type="email" formControlName="email" autocomplete="username"
+                   placeholder="nom@exemple.fr" required aria-describedby="email-feedback"
+                   [attr.aria-invalid]="fieldError('email') ? 'true' : null" (input)="clearFieldError('email')">
+            <div id="email-feedback" class="auth-field-error" aria-live="polite">{{ fieldError('email') }}</div>
+          </div>
+
+          <div class="auth-field">
+            <label for="account-password">Mot de passe</label>
+            <input id="account-password" type="password" formControlName="password" required
+                   [attr.autocomplete]="registration ? 'new-password' : 'current-password'"
+                   aria-describedby="password-feedback"
+                   [attr.aria-invalid]="fieldError('password') ? 'true' : null" (input)="clearFieldError('password')">
+            <div id="password-feedback" aria-live="polite">
+              @if (fieldError('password'); as error) {
+                <span class="auth-field-error">{{ error }}</span>
+              } @else if (registration) {
+                <span class="auth-hint">Au moins 12 caractères, jusqu’à 72 octets UTF-8.</span>
+              }
+            </div>
+          </div>
+
+          @if (showClaimCode()) {
+            <div class="auth-field">
+              <label for="claim-code">Code d’attribution</label>
+              <input id="claim-code" type="password" formControlName="claimCode" maxlength="128"
+                     autocomplete="off" aria-describedby="claim-feedback"
+                     [attr.aria-invalid]="fieldError('claimCode') ? 'true' : null" (input)="clearFieldError('claimCode')">
+              <div id="claim-feedback" aria-live="polite">
+                @if (fieldError('claimCode'); as error) {
+                  <span class="auth-field-error">{{ error }}</span>
+                } @else {
+                  <span class="auth-hint">Requis pour rattacher les tâches de démonstration.</span>
+                }
+              </div>
+            </div>
+          }
+        </fieldset>
+
+        <button class="auth-submit" type="submit" [disabled]="pending()">
+          @if (pending()) {
+            {{ registration ? 'Création du compte…' : 'Connexion…' }}
+          } @else {
+            {{ registration ? 'Créer mon compte' : 'Se connecter' }}
+          }
+        </button>
+      </form>
+
+      <p class="auth-switch">
+        @if (registration) {
+          Déjà inscrit ? <a routerLink="/login">Se connecter</a>
+        } @else {
+          Nouveau sur TaskFlow ? <a routerLink="/register">Créer un compte</a>
+        }
+      </p>
+    </section>
+  </div>
+</main>

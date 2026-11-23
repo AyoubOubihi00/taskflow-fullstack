@@ -22,6 +22,9 @@ public class TaskItem {
     @Enumerated(EnumType.STRING)
     private Status status = Status.TODO;
 
+    @Column(name = "owner_id", updatable = false)
+    private Long ownerId;
+
     public TaskItem() {
     }
 
@@ -55,6 +58,14 @@ public class TaskItem {
 
     public void setStatus(Status status) {
         this.status = status;
+    }
+
+    Long ownerId() {
+        return ownerId;
+    }
+
+    void setOwnerId(long ownerId) {
+        this.ownerId = ownerId;
     }
 
     public enum Status {

@@ -1,7 +1,10 @@
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { Component } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { provideRouter, RouterOutlet, Routes } from '@angular/router';
+import { AuthPageComponent } from './app/auth-page.component';
+import { authGuard, guestGuard } from './app/auth.guard';
+import { authInterceptor } from './app/auth.interceptor';
 import { WorkspaceComponent } from './app/workspace.component';
 
 @Component({
@@ -12,11 +15,19 @@ import { WorkspaceComponent } from './app/workspace.component';
 class AppComponent {}
 
 const routes: Routes = [
-  { path: '', pathMatch: 'full', component: WorkspaceComponent, data: { dashboard: true }, title: 'Tableau de bord · TaskFlow' },
-  { path: 'tasks', component: WorkspaceComponent, title: 'Toutes les tâches · TaskFlow' },
+  { path: 'login', component: AuthPageComponent, canActivate: [guestGuard], title: 'Connexion · TaskFlow' },
+  {
+    path: 'register', component: AuthPageComponent, canActivate: [guestGuard],
+    data: { registration: true }, title: 'Inscription · TaskFlow',
+  },
+  {
+    path: '', pathMatch: 'full', component: WorkspaceComponent, canActivate: [authGuard],
+    data: { dashboard: true }, title: 'Tableau de bord · TaskFlow',
+  },
+  { path: 'tasks', component: WorkspaceComponent, canActivate: [authGuard], title: 'Toutes les tâches · TaskFlow' },
   { path: '**', redirectTo: '' },
 ];
 
 bootstrapApplication(AppComponent, {
-  providers: [provideHttpClient(), provideRouter(routes)],
+  providers: [provideHttpClient(withInterceptors([authInterceptor])), provideRouter(routes)],
 }).catch((error: unknown) => console.error(error));

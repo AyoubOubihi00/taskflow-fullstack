@@ -16,9 +16,15 @@
       </a>
     </nav>
 
-    <div class="connection" [class.offline]="loadError()" [class.connecting]="loading()">
-      <span class="connection-dot" aria-hidden="true"></span>
-      {{ loading() ? 'Connexion à l’API' : loadError() ? 'API indisponible' : 'API connectée' }}
+    <div class="sidebar-footer">
+      <div class="connection" [class.offline]="loadError()" [class.connecting]="loading()">
+        <span class="connection-dot" aria-hidden="true"></span>
+        {{ loading() ? 'Connexion à l’API' : loadError() ? 'API indisponible' : 'API connectée' }}
+      </div>
+      <button type="button" class="nav-link logout" (click)="auth.logout()">
+        <i class="ph ph-sign-out" aria-hidden="true"></i>
+        Déconnexion
+      </button>
     </div>
   </aside>
 

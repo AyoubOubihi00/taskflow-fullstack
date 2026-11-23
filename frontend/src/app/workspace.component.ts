@@ -4,6 +4,7 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { finalize } from 'rxjs';
+import { AuthService } from './auth.service';
 import { TaskApiService } from './task-api.service';
 import { StatusFilter, TASK_STATUSES, TaskApiError, TaskRequestDTO, TaskResponseDTO } from './task.model';
 
@@ -14,6 +15,7 @@ import { StatusFilter, TASK_STATUSES, TaskApiError, TaskRequestDTO, TaskResponse
   styleUrl: './workspace.component.css',
 })
 export class WorkspaceComponent {
+  protected readonly auth = inject(AuthService);
   private readonly api = inject(TaskApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -219,6 +221,8 @@ export class WorkspaceComponent {
     if (error instanceof HttpErrorResponse && error.status === 0) {
       return 'Impossible de joindre l’API. Vérifiez que le serveur Spring Boot est démarré.';
     }
-    return this.apiError(error)?.message || fallback;
+    return this.apiError(error)?.message || (error instanceof HttpErrorResponse && error.status === 403
+      ? 'Tu n’as pas accès à cette action.'
+      : fallback);
   }
 }

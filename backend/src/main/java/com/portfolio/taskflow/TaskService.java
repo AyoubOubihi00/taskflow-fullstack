@@ -2,6 +2,7 @@
 package com.portfolio.taskflow;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -14,34 +15,37 @@ public class TaskService {
         this.taskRepository = taskRepository;
     }
 
-    public List<TaskResponseDTO> getAllTasks() {
-        return taskRepository.findAll().stream()
+    public List<TaskResponseDTO> getAllTasks(long ownerId) {
+        return taskRepository.findAllByOwnerId(ownerId).stream()
                 .map(this::toResponse)
                 .toList();
     }
 
-    public TaskResponseDTO getTaskById(Long id) {
-        return toResponse(findTask(id));
+    public TaskResponseDTO getTaskById(long ownerId, Long id) {
+        return toResponse(findTask(ownerId, id));
     }
 
-    public TaskResponseDTO createTask(TaskRequestDTO request) {
+    public TaskResponseDTO createTask(long ownerId, TaskRequestDTO request) {
         TaskItem task = new TaskItem();
+        task.setOwnerId(ownerId);
         applyRequest(task, request);
         return toResponse(taskRepository.save(task));
     }
 
-    public TaskResponseDTO updateTask(Long id, TaskRequestDTO request) {
-        TaskItem task = findTask(id);
+    @Transactional
+    public TaskResponseDTO updateTask(long ownerId, Long id, TaskRequestDTO request) {
+        TaskItem task = findTask(ownerId, id);
         applyRequest(task, request);
         return toResponse(taskRepository.save(task));
     }
 
-    public void deleteTask(Long id) {
-        taskRepository.delete(findTask(id));
+    @Transactional
+    public void deleteTask(long ownerId, Long id) {
+        taskRepository.delete(findTask(ownerId, id));
     }
 
-    private TaskItem findTask(Long id) {
-        return taskRepository.findById(id)
+    private TaskItem findTask(long ownerId, Long id) {
+        return taskRepository.findByIdAndOwnerId(id, ownerId)
                 .orElseThrow(() -> new TaskNotFoundException(id));
     }
 
