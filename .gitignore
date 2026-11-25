@@ -13,6 +13,9 @@
 .env.*
 !.env.example
 
+# Local PostgreSQL backups
+*.pgdump
+
 # IDE
 .idea/
 .vscode/
@@ -25,3 +28,4 @@ Thumbs.db
 # Local configuration
 application-local.properties
 application-local.yml
+application-local.yaml

@@ -1,0 +1,134 @@
+.button-danger {
+  background: #a12d30;
+  color: #fff;
+}
+
+.button-danger:hover:enabled {
+  background: #822429;
+}
+
+.notice-error {
+  margin-bottom: 1rem;
+  border-color: #f1d6d6;
+  background: #fff2f2;
+  color: #83292c;
+}
+
+.dialog {
+  width: min(34rem, calc(100% - 1.75rem));
+  max-height: calc(100dvh - 1.75rem);
+  padding: 1.35rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1.5rem 5rem #122a2355;
+}
+
+.dialog::backdrop {
+  background: #101f1ab0;
+}
+
+.dialog-header, .dialog-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.dialog-header {
+  justify-content: space-between;
+  margin-bottom: 1.1rem;
+}
+
+.dialog-actions {
+  justify-content: flex-end;
+  margin-top: 1.1rem;
+}
+
+.dialog fieldset {
+  display: grid;
+  gap: 0.65rem;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.form-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.form-field label {
+  font-size: 0.93rem;
+  font-weight: 800;
+}
+
+.field-note {
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 550;
+}
+
+.form-field input, .form-field textarea, .form-field select {
+  width: 100%;
+  min-height: 2.65rem;
+  padding: 0.57rem 0.7rem;
+  border: 1px solid #cdd9d0;
+  border-radius: 0.55rem;
+  background: #fbfdfb;
+  color: var(--text);
+}
+
+.form-field [aria-invalid='true'] {
+  border-color: #bc5255;
+}
+
+.form-field textarea {
+  resize: vertical;
+}
+
+.select-wrapper {
+  position: relative;
+}
+
+.select-wrapper select {
+  appearance: none;
+  padding-right: 2.3rem;
+}
+
+.select-wrapper i {
+  position: absolute;
+  top: 50%;
+  right: 0.8rem;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.field-feedback {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.field-count {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.field-error {
+  color: #9a2b30;
+  font-weight: 700;
+}
+
+.delete-dialog {
+  max-width: 27rem;
+}
+
+.delete-dialog p {
+  margin-bottom: 1rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}

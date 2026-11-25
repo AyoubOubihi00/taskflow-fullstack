@@ -4,9 +4,9 @@ services:
     environment:
       POSTGRES_DB: taskflow
       POSTGRES_USER: taskflow
-      POSTGRES_PASSWORD: taskflow
+      POSTGRES_PASSWORD: "${DATABASE_PASSWORD:?Set DATABASE_PASSWORD via Start-TaskFlow.ps1}"
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 volumes:

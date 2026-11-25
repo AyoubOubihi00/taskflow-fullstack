@@ -1,0 +1,107 @@
+<dialog #taskDialog class="dialog" aria-labelledby="task-dialog-title" (cancel)="onDialogCancel($event)">
+  @let titleControl = taskForm.controls.title;
+  @let descriptionControl = taskForm.controls.description;
+  @let statusControl = taskForm.controls.status;
+  <div class="dialog-header">
+    <h2 id="task-dialog-title">{{ editingId() === null ? 'Nouvelle tâche' : 'Modifier la tâche' }}</h2>
+    <button type="button" class="icon-button" aria-label="Fermer" [disabled]="pending()" (click)="closeDialog(taskDialog)">
+      <i class="ph ph-x" aria-hidden="true"></i>
+    </button>
+  </div>
+  <form [formGroup]="taskForm" (ngSubmit)="saveTask()">
+    @if (dialogError()) {
+      <div class="notice notice-error" role="alert">
+        <i class="ph ph-warning-circle" aria-hidden="true"></i><span>{{ dialogError() }}</span>
+      </div>
+    }
+    <fieldset [disabled]="pending()">
+      <div class="form-field">
+        <label for="task-title">Titre <span class="field-note">(obligatoire)</span></label>
+        <input id="task-title" formControlName="title" autofocus required aria-describedby="title-feedback"
+               [attr.aria-invalid]="(titleControl.touched && titleControl.invalid) || serverFieldErrors().title ? 'true' : null"
+               (input)="clearFieldError('title')">
+        <div id="title-feedback" class="field-feedback">
+          @if (titleControl.touched) {
+            @if (titleControl.hasError('required') || titleControl.hasError('pattern')) {
+              <span class="field-error">Le titre est obligatoire.</span>
+            } @else if (titleControl.hasError('maxlength')) {
+              <span class="field-error">Le titre ne doit pas dépasser {{ titleLimit }} caractères.</span>
+            }
+          }
+          @for (error of serverFieldErrors().title ?? []; track $index) {
+            <span class="field-error">{{ error }}</span>
+          }
+          <span class="field-count">{{ titleControl.value.length }} / {{ titleLimit }}</span>
+        </div>
+      </div>
+      <div class="form-field">
+        <label for="task-description">Description <span class="field-note">(facultative)</span></label>
+        <textarea id="task-description" formControlName="description" rows="4" aria-describedby="description-feedback"
+                  [attr.aria-invalid]="(descriptionControl.touched && descriptionControl.invalid) || serverFieldErrors().description ? 'true' : null"
+                  (input)="clearFieldError('description')"></textarea>
+        <div id="description-feedback" class="field-feedback">
+          @if (descriptionControl.touched && descriptionControl.hasError('maxlength')) {
+            <span class="field-error">La description ne doit pas dépasser {{ descriptionLimit }} caractères.</span>
+          }
+          @for (error of serverFieldErrors().description ?? []; track $index) {
+            <span class="field-error">{{ error }}</span>
+          }
+          <span class="field-count">{{ descriptionControl.value.length }} / {{ descriptionLimit }}</span>
+        </div>
+      </div>
+      <div class="form-field">
+        <label for="task-status">Statut</label>
+        <div class="select-wrapper">
+          <select id="task-status" formControlName="status" required aria-describedby="status-feedback"
+                  [attr.aria-invalid]="(statusControl.touched && statusControl.invalid) || serverFieldErrors().status ? 'true' : null"
+                  (change)="clearFieldError('status')">
+            @for (option of statusOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+          <i class="ph ph-caret-down" aria-hidden="true"></i>
+        </div>
+        <div id="status-feedback" class="field-feedback">
+          @if (statusControl.touched && statusControl.invalid) {
+            <span class="field-error">Sélectionnez un statut valide.</span>
+          }
+          @for (error of serverFieldErrors().status ?? []; track $index) {
+            <span class="field-error">{{ error }}</span>
+          }
+        </div>
+      </div>
+    </fieldset>
+    <div class="dialog-actions">
+      <button type="button" class="button button-secondary" [disabled]="pending()" (click)="closeDialog(taskDialog)">
+        Annuler
+      </button>
+      <button type="submit" class="button button-primary" [disabled]="pending()">
+        {{ pending() ? 'Enregistrement…' : editingId() === null ? 'Créer la tâche' : 'Enregistrer' }}
+      </button>
+    </div>
+  </form>
+</dialog>
+
+<dialog #deleteDialog class="dialog delete-dialog" aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-description" (cancel)="onDialogCancel($event)">
+  <div class="dialog-header">
+    <h2 id="delete-dialog-title">Supprimer la tâche</h2>
+    <button type="button" class="icon-button" aria-label="Fermer" [disabled]="pending()" (click)="closeDialog(deleteDialog)">
+      <i class="ph ph-x" aria-hidden="true"></i>
+    </button>
+  </div>
+  <p id="delete-description">Supprimer « <strong>{{ deletingTask()?.title }}</strong> » définitivement&nbsp;?</p>
+  @if (dialogError()) {
+    <div class="notice notice-error" role="alert">
+      <i class="ph ph-warning-circle" aria-hidden="true"></i><span>{{ dialogError() }}</span>
+    </div>
+  }
+  <div class="dialog-actions">
+    <button type="button" class="button button-secondary" autofocus [disabled]="pending()" (click)="closeDialog(deleteDialog)">
+      Annuler
+    </button>
+    <button type="button" class="button button-danger" [disabled]="pending()" (click)="deleteTask()">
+      {{ pending() ? 'Suppression…' : 'Supprimer' }}
+    </button>
+  </div>
+</dialog>
